@@ -7,15 +7,20 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
+	"time"
 )
 
 type Config struct {
 	Listen  string            `json:"listen"`
 	Sources []json.RawMessage `json:"sources"`
+	Refresh int               `json:"refresh"`
 }
 
 type Server struct {
 	sources []Source
+	mutex   sync.Mutex
+	cache   []Signal
 }
 
 type Signal struct {
@@ -66,6 +71,8 @@ func main() {
 	}
 	srv := &Server{sources: sources}
 
+	go srv.refreshLoop(config.Refresh)
+
 	http.HandleFunc("/status", srv.handleStatus)
 	log.Fatal(http.ListenAndServe(config.Listen, nil))
 }
@@ -96,11 +103,29 @@ func loadConfig(path string) (*Config, error) {
 }
 
 func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
-	signals := []Signal{
-		{Name: "01", State: "ok", Busy: false},
-		{Name: "02", State: "warn", Busy: false},
-		{Name: "03", State: "error", Busy: true},
-	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(signals)
+	s.mutex.Lock()
+	json.NewEncoder(w).Encode(s.cache)
+	s.mutex.Unlock()
+}
+
+func (s *Server) refresh() {
+	var all []Signal
+	for _, src := range s.sources {
+		sigs, err := src.Fetch()
+		if err != nil {
+			log.Printf("source: %v", err)
+		}
+		all = append(all, sigs...)
+	}
+	s.mutex.Lock()
+	s.cache = all
+	s.mutex.Unlock()
+}
+
+func (s *Server) refreshLoop(refresh int) {
+	for {
+		s.refresh()
+		time.Sleep(time.Duration(refresh) * time.Second)
+	}
 }

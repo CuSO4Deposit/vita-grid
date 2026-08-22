@@ -75,7 +75,7 @@ func main() {
 		}
 		sources = append(sources, s)
 	}
-	srv := &Server{sources: sources}
+	srv := &Server{sources: sources, cache: []Signal{}}
 
 	go srv.refreshLoop(config.Refresh)
 

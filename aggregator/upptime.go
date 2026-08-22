@@ -65,7 +65,6 @@ func parseSingleUpptimeResponse(respBytes []byte) (*UpptimeResponse, error) {
 	var url string
 	var status string
 	var lastUpdated time.Time
-	var err error
 
 	kv := make(map[string]string)
 	for _, line := range lines {
@@ -77,9 +76,10 @@ func parseSingleUpptimeResponse(respBytes []byte) (*UpptimeResponse, error) {
 
 	url = kv["url"]
 	status = kv["status"]
-	lastUpdated, err = time.Parse(time.RFC3339, kv["lastUpdated"])
-	if err != nil {
-		return nil, err
+	// lastUpdated do not reflect true updates from upptime,
+	// 	because upptime skips commit when status doesn't change
+	if v, err := time.Parse(time.RFC3339, kv["lastUpdated"]); err == nil {
+		lastUpdated = v
 	}
 	parsed := UpptimeResponse{Url: url, Status: status, LastUpdated: lastUpdated}
 	return &parsed, nil
@@ -105,11 +105,6 @@ func upptimeStatus(upptimeConfig *UpptimeConfig) map[string]Signal {
 
 			if upptimeResp.Status != "up" {
 				state = worst(state, "error")
-				continue
-			}
-
-			if time.Since(upptimeResp.LastUpdated) > 3*time.Hour {
-				state = worst(state, "warn")
 				continue
 			}
 		}

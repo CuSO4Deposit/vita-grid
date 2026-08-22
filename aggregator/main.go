@@ -47,6 +47,12 @@ func newSource(raw json.RawMessage) (Source, error) {
 			return nil, err
 		}
 		return &u, nil
+	case "web":
+		var w WebConfig
+		if err := json.Unmarshal(raw, &w); err != nil {
+			return nil, err
+		}
+		return &w, nil
 	default:
 		return nil, fmt.Errorf("unknown source type: %q", probe.Type)
 	}

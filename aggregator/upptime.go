@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"vita-grid/shared"
 )
 
 type UpptimeConfig struct {
@@ -15,11 +16,11 @@ type UpptimeConfig struct {
 	Groups map[string][]string `json:"groups"`
 }
 
-func (u *UpptimeConfig) Fetch() ([]Signal, error) {
+func (u *UpptimeConfig) Fetch() ([]shared.Signal, error) {
 	m := upptimeStatus(u)
 
 	keys := make([]string, 0, len(m))
-	var out []Signal
+	var out []shared.Signal
 	for k := range m {
 		keys = append(keys, k)
 	}
@@ -85,10 +86,10 @@ func parseSingleUpptimeResponse(respBytes []byte) (*UpptimeResponse, error) {
 	return &parsed, nil
 }
 
-func upptimeStatus(upptimeConfig *UpptimeConfig) map[string]Signal {
-	signals := make(map[string]Signal)
+func upptimeStatus(upptimeConfig *UpptimeConfig) map[string]shared.Signal {
+	signals := make(map[string]shared.Signal)
 	for host, sites := range upptimeConfig.Groups {
-		state := "ok"
+		state := shared.StateOK
 		for _, site := range sites {
 			githubusercontentResp, err := fetchHistoryFile(upptimeConfig.Repo, upptimeConfig.Branch, site)
 			if err != nil {
@@ -108,7 +109,7 @@ func upptimeStatus(upptimeConfig *UpptimeConfig) map[string]Signal {
 				continue
 			}
 		}
-		signals[host] = Signal{Name: host, State: state, Busy: false}
+		signals[host] = shared.Signal{Name: host, State: state, Busy: false}
 	}
 	return signals
 }

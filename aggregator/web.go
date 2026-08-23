@@ -1,20 +1,24 @@
 package main
 
+import (
+	"vita-grid/shared"
+)
+
 type WebConfig struct {
 	URL  string `json:"url"`
 	Name string `json:"name"`
 }
 
-func (w *WebConfig) Fetch() ([]Signal, error) {
+func (w *WebConfig) Fetch() ([]shared.Signal, error) {
 	resp, err := client.Get(w.URL)
 	if err != nil {
-		return []Signal{{Name: w.Name, State: "error"}}, nil
+		return []shared.Signal{{Name: w.Name, State: "error"}}, nil
 	}
 	defer resp.Body.Close()
 
-	state := "error"
+	state := shared.StateError
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		state = "ok"
+		state = shared.StateOK
 	}
-	return []Signal{{Name: w.Name, State: state}}, nil
+	return []shared.Signal{{Name: w.Name, State: state}}, nil
 }

@@ -9,6 +9,7 @@ import (
 	"os"
 	"sync"
 	"time"
+	"vita-grid/shared"
 )
 
 type Config struct {
@@ -20,17 +21,11 @@ type Config struct {
 type Server struct {
 	sources []Source
 	mutex   sync.Mutex
-	cache   []Signal
-}
-
-type Signal struct {
-	Name  string `json:"name"`
-	State string `json:"state"`
-	Busy  bool   `json:"busy"`
+	cache   []shared.Signal
 }
 
 type Source interface {
-	Fetch() ([]Signal, error)
+	Fetch() ([]shared.Signal, error)
 }
 
 func newSource(raw json.RawMessage) (Source, error) {
@@ -75,7 +70,7 @@ func main() {
 		}
 		sources = append(sources, s)
 	}
-	srv := &Server{sources: sources, cache: []Signal{}}
+	srv := &Server{sources: sources, cache: []shared.Signal{}}
 
 	go srv.refreshLoop(config.Refresh)
 
@@ -83,14 +78,14 @@ func main() {
 	log.Fatal(http.ListenAndServe(config.Listen, nil))
 }
 
-func worst(a string, b string) string {
-	if a == "error" || b == "error" {
-		return "error"
+func worst(a shared.State, b shared.State) shared.State {
+	if a == shared.StateError || b == shared.StateError {
+		return shared.StateError
 	}
-	if a == "warn" || b == "warn" {
-		return "warn"
+	if a == shared.StateWarn || b == shared.StateWarn {
+		return shared.StateWarn
 	}
-	return "ok"
+	return shared.StateOK
 }
 
 func loadConfig(path string) (*Config, error) {
@@ -116,7 +111,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s *Server) refresh() {
-	var all []Signal
+	var all []shared.Signal
 	for _, src := range s.sources {
 		sigs, err := src.Fetch()
 		if err != nil {

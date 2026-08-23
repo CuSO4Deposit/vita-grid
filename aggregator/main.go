@@ -48,6 +48,12 @@ func newSource(raw json.RawMessage) (Source, error) {
 			return nil, err
 		}
 		return &w, nil
+	case "statusd":
+		var sd StatusdConfig
+		if err := json.Unmarshal(raw, &sd); err != nil {
+			return nil, err
+		}
+		return &sd, nil
 	default:
 		return nil, fmt.Errorf("unknown source type: %q", probe.Type)
 	}

@@ -69,8 +69,8 @@ func collectSignals(config *Config) []shared.Signal {
 	for _, probe := range config.Probes {
 		var state shared.State
 		switch probe.Kind {
-		case "systemd":
-			state = checkSystemd(probe.Target)
+		case "systemd-active":
+			state = checkSystemdActive(probe.Target)
 		default:
 			state = shared.StateWarn
 		}
@@ -79,7 +79,7 @@ func collectSignals(config *Config) []shared.Signal {
 	return out
 }
 
-func checkSystemd(unit string) shared.State {
+func checkSystemdActive(unit string) shared.State {
 	out, err := exec.Command("systemctl", "is-active", unit).Output()
 	if err != nil {
 		return shared.StateError

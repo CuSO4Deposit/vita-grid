@@ -39,7 +39,7 @@ busy=true → 按上述颜色闪烁
 ### statusd 契约
 
 - 输出同一份 JSON 列表，statusd 内部用**本地可读名**（不带前缀；前缀由聚合器按 host 加上）
-- 每信号声明 `kind`：`systemd-active`（查常驻服务 `is-active`）/ `systemd-result`（查 oneshot/timer 触发的服务上次运行结果，用 `Result`/`ExecMainStatus`，**勿用 is-active**）/ `marker`（读标记文件，暂缓）/ `cmd`（跑命令看退出码）/ `tcp`（连端口）
+- 每信号声明 `kind`：`systemd-active`（查常驻服务 `is-active`）/ `systemd-result`（查 oneshot/timer 触发的服务上次运行结果，用 `Result`，**勿用 is-active**；时效看 `timer` 单元的 `LastTriggerUSec` + `maxAge`，**勿用服务时间戳**——systemd 会清空）/ `marker`（读标记文件，暂缓）/ `cmd`（跑命令看退出码）/ `tcp`（连端口）
 - kind 拆分规则：命令/解析/映射全不同 → 独立 kind；只差小参数 → 同 kind + 字段
 - 端口约定 8081
 

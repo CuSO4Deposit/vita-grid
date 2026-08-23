@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 	"vita-grid/shared"
 )
 
@@ -20,6 +21,8 @@ type ProbeConfig struct {
 	Name   string `json:"name"`
 	Kind   string `json:"kind"`
 	Target string `json:"target"`
+	Timer  string `json:"timer,omitempty"`
+	MaxAge string `json:"maxAge,omitempty"`
 }
 
 type Server struct {
@@ -71,6 +74,8 @@ func collectSignals(config *Config) []shared.Signal {
 		switch probe.Kind {
 		case "systemd-active":
 			state = checkSystemdActive(probe.Target)
+		case "systemd-result":
+			state = checkSystemdResult(probe.Target, probe.Timer, probe.MaxAge)
 		default:
 			state = shared.StateWarn
 		}
@@ -88,4 +93,41 @@ func checkSystemdActive(unit string) shared.State {
 		return shared.StateOK
 	}
 	return shared.StateWarn
+}
+
+func checkSystemdResult(unit, timer, maxAge string) shared.State {
+	const defaultMaxAge = 26 * time.Hour
+
+	result, err := exec.Command("systemctl", "show", unit, "-p", "Result", "--value").Output()
+	if err != nil {
+		return shared.StateWarn
+	}
+	switch strings.TrimSpace(string(result)) {
+	case "":
+		return shared.StateWarn
+	case "success":
+	default:
+		return shared.StateError
+	}
+
+	if timer == "" {
+		return shared.StateOK
+	}
+
+	last, err := exec.Command("systemctl", "show", timer, "-p", "LastTriggerUSec", "--value").Output()
+	if err != nil {
+		return shared.StateWarn
+	}
+	ts, err := time.Parse("Mon 2006-01-02 15:04:05 MST", strings.TrimSpace(string(last)))
+	if err != nil {
+		return shared.StateWarn
+	}
+	age, err := time.ParseDuration(maxAge)
+	if err != nil {
+		age = defaultMaxAge
+	}
+	if shared.Stale(ts, age) {
+		return shared.StateWarn
+	}
+	return shared.StateOK
 }

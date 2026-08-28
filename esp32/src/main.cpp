@@ -31,6 +31,8 @@ uint8_t bhScl = 22;
 float bhOffLux = 20;
 uint8_t brightLevel = 50;
 
+bool serpentine = false;
+
 unsigned long lastPollMs = 0;
 unsigned long lastBrightMs = 0;
 
@@ -51,6 +53,15 @@ CRGB colorForState(const char* state, bool busy, unsigned long now) {
   return c;
 }
 
+uint16_t physicalIndex(uint16_t logical) {
+  if (!serpentine) return logical;
+  constexpr uint16_t cols = 8;
+  uint16_t row = logical / cols;
+  uint16_t col = logical % cols;
+  if (row % 2 == 1) col = cols - 1 - col;
+  return row * cols + col;
+}
+
 void setMappedLeds(JsonArray arr, unsigned long now) {
   FastLED.clear();
   for (uint8_t i = 0; i < mappingCount; i++) {
@@ -64,7 +75,7 @@ void setMappedLeds(JsonArray arr, unsigned long now) {
         break;
       }
     }
-    leds[mapping[i].index] = c;
+    leds[physicalIndex(mapping[i].index)] = c;
   }
   FastLED.show();
 }
@@ -95,6 +106,7 @@ bool parseConfig() {
   bhScl = doc["bh1750"]["scl"] | 22;
   bhOffLux = doc["bh1750"]["offLux"] | 20.0f;
   brightLevel = doc["brightness"]["level"] | 50;
+  serpentine = doc["led"]["serpentine"] | false;
 
   mappingCount = 0;
   for (JsonObject m : doc["mapping"].as<JsonArray>()) {

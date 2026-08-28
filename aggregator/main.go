@@ -20,42 +20,50 @@ type Config struct {
 
 type Server struct {
 	sources []Source
+	refresh []int
+	cache   [][]shared.Signal
 	mutex   sync.Mutex
-	cache   []shared.Signal
 }
 
 type Source interface {
 	Fetch() ([]shared.Signal, error)
 }
 
-func newSource(raw json.RawMessage) (Source, error) {
+func refreshOrDefault(v, def int) int {
+	if v > 0 {
+		return v
+	}
+	return def
+}
+
+func newSource(raw json.RawMessage, defaultRefresh int) (Source, int, error) {
 	var probe struct {
 		Type string `json:"type"`
 	}
 	if err := json.Unmarshal(raw, &probe); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	switch probe.Type {
 	case "upptime":
 		var u UpptimeConfig
 		if err := json.Unmarshal(raw, &u); err != nil {
-			return nil, err
+			return nil, 0, err
 		}
-		return &u, nil
+		return &u, refreshOrDefault(u.Refresh, defaultRefresh), nil
 	case "web":
 		var w WebConfig
 		if err := json.Unmarshal(raw, &w); err != nil {
-			return nil, err
+			return nil, 0, err
 		}
-		return &w, nil
+		return &w, refreshOrDefault(w.Refresh, defaultRefresh), nil
 	case "statusd":
 		var sd StatusdConfig
 		if err := json.Unmarshal(raw, &sd); err != nil {
-			return nil, err
+			return nil, 0, err
 		}
-		return &sd, nil
+		return &sd, refreshOrDefault(sd.Refresh, defaultRefresh), nil
 	default:
-		return nil, fmt.Errorf("unknown source type: %q", probe.Type)
+		return nil, 0, fmt.Errorf("unknown source type: %q", probe.Type)
 	}
 }
 
@@ -69,16 +77,22 @@ func main() {
 	}
 
 	sources := make([]Source, 0, len(config.Sources))
+	refresh := make([]int, 0, len(config.Sources))
 	for _, raw := range config.Sources {
-		s, err := newSource(raw)
+		s, r, err := newSource(raw, config.Refresh)
 		if err != nil {
 			log.Fatalf("bad source: %v", err)
 		}
 		sources = append(sources, s)
+		refresh = append(refresh, r)
 	}
-	srv := &Server{sources: sources, cache: []shared.Signal{}}
+	srv := &Server{
+		sources: sources,
+		refresh: refresh,
+		cache:   make([][]shared.Signal, len(sources)),
+	}
 
-	go srv.refreshLoop(config.Refresh)
+	srv.start()
 
 	http.HandleFunc("/status", srv.handleStatus)
 	log.Fatal(http.ListenAndServe(config.Listen, nil))
@@ -112,27 +126,29 @@ func loadConfig(path string) (*Config, error) {
 func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	s.mutex.Lock()
-	json.NewEncoder(w).Encode(s.cache)
+	var all []shared.Signal
+	for _, c := range s.cache {
+		all = append(all, c...)
+	}
+	json.NewEncoder(w).Encode(all)
 	s.mutex.Unlock()
 }
 
-func (s *Server) refresh() {
-	var all []shared.Signal
-	for _, src := range s.sources {
+func (s *Server) start() {
+	for i, src := range s.sources {
+		go s.sourceLoop(i, src)
+	}
+}
+
+func (s *Server) sourceLoop(i int, src Source) {
+	for {
 		sigs, err := src.Fetch()
 		if err != nil {
-			log.Printf("source: %v", err)
+			log.Printf("source %d: %v", i, err)
 		}
-		all = append(all, sigs...)
-	}
-	s.mutex.Lock()
-	s.cache = all
-	s.mutex.Unlock()
-}
-
-func (s *Server) refreshLoop(refresh int) {
-	for {
-		s.refresh()
-		time.Sleep(time.Duration(refresh) * time.Second)
+		s.mutex.Lock()
+		s.cache[i] = sigs
+		s.mutex.Unlock()
+		time.Sleep(time.Duration(s.refresh[i]) * time.Second)
 	}
 }

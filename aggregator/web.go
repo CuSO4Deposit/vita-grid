@@ -5,8 +5,9 @@ import (
 )
 
 type WebConfig struct {
-	URL  string `json:"url"`
-	Name string `json:"name"`
+	URL     string `json:"url"`
+	Name    string `json:"name"`
+	Refresh int    `json:"refresh"`
 }
 
 func (w *WebConfig) Fetch() ([]shared.Signal, error) {

@@ -7,9 +7,10 @@ import (
 )
 
 type StatusdConfig struct {
-	URL   string `json:"url"`
-	Host  string `json:"host"`
-	fails int
+	URL     string `json:"url"`
+	Host    string `json:"host"`
+	Refresh int    `json:"refresh"`
+	fails   int
 }
 
 func (s *StatusdConfig) Fetch() ([]shared.Signal, error) {

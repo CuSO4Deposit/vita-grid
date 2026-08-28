@@ -11,9 +11,10 @@ import (
 )
 
 type UpptimeConfig struct {
-	Repo   string              `json:"repo"`
-	Branch string              `json:"branch"`
-	Groups map[string][]string `json:"groups"`
+	Repo    string              `json:"repo"`
+	Branch  string              `json:"branch"`
+	Groups  map[string][]string `json:"groups"`
+	Refresh int                 `json:"refresh"`
 }
 
 func (u *UpptimeConfig) Fetch() ([]shared.Signal, error) {

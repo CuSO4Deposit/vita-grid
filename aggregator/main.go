@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"sync"
 	"time"
 	"vita-grid/shared"
@@ -95,6 +96,7 @@ func main() {
 	srv.start()
 
 	http.HandleFunc("/status", srv.handleStatus)
+	http.HandleFunc("/status/text", srv.handleStatusText)
 	log.Fatal(http.ListenAndServe(config.Listen, nil))
 }
 
@@ -132,6 +134,39 @@ func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
 	}
 	json.NewEncoder(w).Encode(all)
 	s.mutex.Unlock()
+}
+
+func (s *Server) handleStatusText(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	s.mutex.Lock()
+	var all []shared.Signal
+	for _, c := range s.cache {
+		all = append(all, c...)
+	}
+	s.mutex.Unlock()
+
+	var errors, warns []string
+	for _, sig := range all {
+		switch sig.State {
+		case shared.StateError:
+			errors = append(errors, sig.Name)
+		case shared.StateWarn:
+			warns = append(warns, sig.Name)
+		}
+	}
+	sort.Strings(errors)
+	sort.Strings(warns)
+
+	if len(errors) == 0 && len(warns) == 0 {
+		fmt.Fprintln(w, "all ok")
+		return
+	}
+	for _, name := range errors {
+		fmt.Fprintf(w, "RED: %s\n", name)
+	}
+	for _, name := range warns {
+		fmt.Fprintf(w, "YELLOW: %s\n", name)
+	}
 }
 
 func (s *Server) start() {

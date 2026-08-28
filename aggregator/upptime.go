@@ -17,18 +17,16 @@ type UpptimeConfig struct {
 }
 
 func (u *UpptimeConfig) Fetch() ([]shared.Signal, error) {
-	m := upptimeStatus(u)
-
-	keys := make([]string, 0, len(m))
-	var out []shared.Signal
-	for k := range m {
+	keys := make([]string, 0, len(u.Groups))
+	for k := range u.Groups {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
-	for _, k := range keys {
-		out = append(out, m[k])
-	}
 
+	var out []shared.Signal
+	for _, host := range keys {
+		out = append(out, upptimeGroupStatus(u, host)...)
+	}
 	return out, nil
 }
 
@@ -86,30 +84,31 @@ func parseSingleUpptimeResponse(respBytes []byte) (*UpptimeResponse, error) {
 	return &parsed, nil
 }
 
-func upptimeStatus(upptimeConfig *UpptimeConfig) map[string]shared.Signal {
-	signals := make(map[string]shared.Signal)
-	for host, sites := range upptimeConfig.Groups {
-		state := shared.StateOK
-		for _, site := range sites {
-			githubusercontentResp, err := fetchHistoryFile(upptimeConfig.Repo, upptimeConfig.Branch, site)
-			if err != nil {
-				// Do not block other sites, fetch failure as warning
-				state = worst(state, "warn")
-				continue
-			}
-
-			upptimeResp, err := parseSingleUpptimeResponse(githubusercontentResp)
-			if err != nil {
-				state = worst(state, "warn")
-				continue
-			}
-
-			if upptimeResp.Status != "up" {
-				state = worst(state, "error")
-				continue
-			}
+func upptimeGroupStatus(upptimeConfig *UpptimeConfig, host string) []shared.Signal {
+	state := shared.StateOK
+	var sites []shared.Signal
+	for _, site := range upptimeConfig.Groups[host] {
+		githubusercontentResp, err := fetchHistoryFile(upptimeConfig.Repo, upptimeConfig.Branch, site)
+		if err != nil {
+			// Do not block other sites, fetch failure as warning
+			sites = append(sites, shared.Signal{Name: host + ":" + site, State: shared.StateWarn, Busy: false})
+			state = worst(state, shared.StateWarn)
+			continue
 		}
-		signals[host] = shared.Signal{Name: host, State: state, Busy: false}
+
+		upptimeResp, err := parseSingleUpptimeResponse(githubusercontentResp)
+		if err != nil {
+			sites = append(sites, shared.Signal{Name: host + ":" + site, State: shared.StateWarn, Busy: false})
+			state = worst(state, shared.StateWarn)
+			continue
+		}
+
+		siteState := shared.StateOK
+		if upptimeResp.Status != "up" {
+			siteState = shared.StateError
+		}
+		sites = append(sites, shared.Signal{Name: host + ":" + site, State: siteState, Busy: false})
+		state = worst(state, siteState)
 	}
-	return signals
+	return append([]shared.Signal{{Name: host, State: state, Busy: false}}, sites...)
 }

@@ -26,7 +26,7 @@
           ];
           env.CGO_ENABLED = "0";
         };
-        packages.default = self.packages.${pkgs.system}.vita-grid;
+        packages.default = self.packages.${pkgs.stdenv.hostPlatform.system}.vita-grid;
       };
 
       flake = {

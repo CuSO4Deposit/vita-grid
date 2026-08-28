@@ -1,0 +1,25 @@
+{
+  "wifi": { "ssid": "your-ssid", "pass": "your-pass" },
+  "poll": { "url": "http://192.168.1.10:8080/status", "interval": 30 },
+  "led": { "pin": 4, "count": 64, "order": "GRB" },
+  "bh1750": {
+    "enabled": true,
+    "sda": 21,
+    "scl": 22,
+    "addr": 35,
+    "minLux": 5,
+    "maxLux": 400
+  },
+  "brightness": { "min": 4, "max": 128 },
+  "mapping": [
+    { "name": "laborari", "index": 0 },
+    { "name": "laborari:backup", "index": 1 },
+    { "name": "lexikos", "index": 2 },
+    { "name": "lexikos:backup", "index": 3 },
+    { "name": "proximo", "index": 4 },
+    { "name": "proximo:backup", "index": 5 },
+    { "name": "racknerd", "index": 6 },
+    { "name": "web-alive", "index": 8 },
+    { "name": "status.depoze.xyz", "index": 9 }
+  ]
+}

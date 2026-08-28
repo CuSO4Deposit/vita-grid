@@ -7,19 +7,23 @@
     "sda": 21,
     "scl": 22,
     "addr": 35,
-    "minLux": 5,
-    "maxLux": 400
+    "offLux": 20
   },
-  "brightness": { "min": 4, "max": 128 },
+  "brightness": { "level": 5 },
   "mapping": [
-    { "name": "laborari", "index": 0 },
-    { "name": "laborari:backup", "index": 1 },
-    { "name": "lexikos", "index": 2 },
-    { "name": "lexikos:backup", "index": 3 },
-    { "name": "proximo", "index": 4 },
-    { "name": "proximo:backup", "index": 5 },
-    { "name": "racknerd", "index": 6 },
-    { "name": "web-alive", "index": 8 },
-    { "name": "status.depoze.xyz", "index": 9 }
+    { "name": "vercel", "index": 0 },
+    { "name": "vercel:API", "index": 1 },
+    { "name": "vercel:API Next", "index": 2 },
+    { "name": "vercel:AI Chat", "index": 3 },
+    { "name": "githubio", "index": 8 },
+    { "name": "githubio:Blog", "index": 9 },
+    { "name": "githubio:Status", "index": 10 },
+    { "name": "racknerd", "index": 16 },
+    { "name": "racknerd:Bookmark", "index": 17 },
+    { "name": "racknerd:RSS", "index": 18 },
+    { "name": "racknerd:RSSHub", "index": 19 },
+    { "name": "racknerd:Wakapi", "index": 20 },
+    { "name": "laborari", "index": 24 },
+    { "name": "laborari:backup", "index": 25 }
   ]
 }

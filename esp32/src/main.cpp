@@ -28,10 +28,8 @@ uint32_t pollIntervalSec = 30;
 bool bhEnabled = false;
 uint8_t bhSda = 21;
 uint8_t bhScl = 22;
-float bhMinLux = 5;
-float bhMaxLux = 400;
-uint8_t brightMin = 4;
-uint8_t brightMax = 128;
+float bhOffLux = 20;
+uint8_t brightLevel = 50;
 
 unsigned long lastPollMs = 0;
 unsigned long lastBrightMs = 0;
@@ -95,10 +93,8 @@ bool parseConfig() {
   bhEnabled = doc["bh1750"]["enabled"] | false;
   bhSda = doc["bh1750"]["sda"] | 21;
   bhScl = doc["bh1750"]["scl"] | 22;
-  bhMinLux = doc["bh1750"]["minLux"] | 5.0f;
-  bhMaxLux = doc["bh1750"]["maxLux"] | 400.0f;
-  brightMin = doc["brightness"]["min"] | 4;
-  brightMax = doc["brightness"]["max"] | 128;
+  bhOffLux = doc["bh1750"]["offLux"] | 20.0f;
+  brightLevel = doc["brightness"]["level"] | 50;
 
   mappingCount = 0;
   for (JsonObject m : doc["mapping"].as<JsonArray>()) {
@@ -138,9 +134,13 @@ void updateBrightness() {
   }
   uint16_t lux = sensor.readLightLevel();
   Serial.printf("lux: %u\n", lux);
-  float t = (lux - bhMinLux) / (bhMaxLux - bhMinLux);
-  t = t < 0 ? 0 : (t > 1 ? 1 : t);
-  FastLED.setBrightness(brightMin + (uint8_t)(t * (brightMax - brightMin)));
+  if (lux <= bhOffLux) {
+    FastLED.setBrightness(brightLevel);
+    FastLED.clear();
+    FastLED.show();
+    return;
+  }
+  FastLED.setBrightness(brightLevel);
   FastLED.show();
 }
 
@@ -149,13 +149,11 @@ void pollStatus(unsigned long now) {
   http.setTimeout(10000);
   if (!http.begin(statusUrl)) {
     Serial.println("http.begin failed");
-    blinkAll(CRGB::Blue, now);
     return;
   }
   int code = http.GET();
   if (code != HTTP_CODE_OK) {
     Serial.printf("http status: %d\n", code);
-    blinkAll(CRGB::Blue, now);
     http.end();
     return;
   }
@@ -166,7 +164,6 @@ void pollStatus(unsigned long now) {
   DeserializationError err = deserializeJson(doc, body);
   if (err) {
     Serial.printf("status parse error: %s\n", err.c_str());
-    blinkAll(CRGB::Blue, now);
     return;
   }
   setMappedLeds(doc.as<JsonArray>(), now);
@@ -186,7 +183,7 @@ void setup() {
   }
 
   FastLED.addLeds<WS2812B, LED_PIN, LED_ORDER>(leds, LED_COUNT);
-  FastLED.setBrightness(brightMax);
+  FastLED.setBrightness(brightLevel);
   FastLED.clear();
   FastLED.show();
 

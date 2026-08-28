@@ -23,6 +23,11 @@ in
     aggregator = {
       enable = lib.mkEnableOption "vita-grid aggregator";
       configFile = lib.mkOption { type = lib.types.path; };
+      proxy = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "HTTP proxy URL for the aggregator (needed when outbound internet requires a proxy).";
+      };
     };
   };
 
@@ -44,6 +49,12 @@ in
         description = "vita-grid aggregator";
         wantedBy = [ "multi-user.target" ];
         after = [ "network.target" ];
+        environment = lib.optionalAttrs (cfg.aggregator.proxy != null) {
+          http_proxy = cfg.aggregator.proxy;
+          https_proxy = cfg.aggregator.proxy;
+          HTTP_PROXY = cfg.aggregator.proxy;
+          HTTPS_PROXY = cfg.aggregator.proxy;
+        };
         serviceConfig = {
           ExecStart = "${cfg.package}/bin/aggregator -config ${cfg.aggregator.configFile}";
           Restart = "on-failure";

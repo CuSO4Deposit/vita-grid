@@ -84,11 +84,15 @@ func parseSingleUpptimeResponse(respBytes []byte) (*UpptimeResponse, error) {
 	return &parsed, nil
 }
 
+func slugify(name string) string {
+	return strings.ReplaceAll(strings.ToLower(name), " ", "-")
+}
+
 func upptimeGroupStatus(upptimeConfig *UpptimeConfig, host string) []shared.Signal {
 	state := shared.StateOK
 	var sites []shared.Signal
 	for _, site := range upptimeConfig.Groups[host] {
-		githubusercontentResp, err := fetchHistoryFile(upptimeConfig.Repo, upptimeConfig.Branch, site)
+		githubusercontentResp, err := fetchHistoryFile(upptimeConfig.Repo, upptimeConfig.Branch, slugify(site))
 		if err != nil {
 			// Do not block other sites, fetch failure as warning
 			sites = append(sites, shared.Signal{Name: host + ":" + site, State: shared.StateWarn, Busy: false})

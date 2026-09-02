@@ -22,7 +22,6 @@ LedMap mapping[MAX_LEDS];
 uint8_t mappingCount = 0;
 
 uint16_t ledCount = MAX_LEDS;
-uint8_t ledPin = 4;
 bool serpentine = false;
 
 bool bhEnabled = false;
@@ -63,7 +62,6 @@ CRGB colorFromArray(JsonArray arr, CRGB def) {
 bool applyConfig(JsonDocument& doc) {
   mappingCount = 0;
 
-  ledPin = doc["led"]["pin"] | 4;
   ledCount = doc["led"]["count"] | MAX_LEDS;
   if (ledCount < 1 || ledCount > MAX_LEDS) {
     ledCount = MAX_LEDS;
@@ -76,6 +74,7 @@ bool applyConfig(JsonDocument& doc) {
   bhOffLux = doc["bh1750"]["offLux"] | 20.0f;
 
   brightLevel = doc["brightness"]["level"] | 50;
+  FastLED.setBrightness(brightLevel);
 
   JsonObject colors = doc["colors"];
   colorOk = colorFromArray(colors["ok"].as<JsonArray>(), CRGB::Green);
@@ -195,7 +194,7 @@ void setMappedLeds(JsonArray arr, unsigned long now) {
 
 void blinkAll(CRGB c, unsigned long now) {
   FastLED.clear();
-  if ((now / kBlinkMs) % 2 == 0) {
+  if ((now / blinkMs) % 2 == 0) {
     fill_solid(leds, MAX_LEDS, c);
   }
   FastLED.show();
@@ -275,7 +274,7 @@ void setup() {
     Serial.println("no config in NVS, will fetch");
   }
 
-  FastLED.addLeds<WS2812B, LED_ORDER>(leds, MAX_LEDS, ledPin);
+  FastLED.addLeds<WS2812B, LED_PIN, LED_ORDER>(leds, MAX_LEDS);
   FastLED.setBrightness(brightLevel);
   FastLED.clear();
   FastLED.show();

@@ -1,2 +1,3 @@
 .pio/
 src/config_data.h
+config.*.json

@@ -1,33 +1,5 @@
 {
   "wifi": { "ssid": "your-ssid", "pass": "your-pass" },
-  "poll": { "url": "http://192.168.1.10:8080/status", "interval": 30 },
-  "led": { "pin": 4, "count": 64, "order": "GRB", "serpentine": true },
-  "bh1750": {
-    "enabled": true,
-    "sda": 21,
-    "scl": 22,
-    "addr": 35,
-    "offLux": 20
-  },
-  "brightness": { "level": 5 },
-  "mapping": [
-    { "name": "vercel-githubio", "index": 0 },
-    { "name": "vercel-githubio:API", "index": 1 },
-    { "name": "vercel-githubio:API Next", "index": 2 },
-    { "name": "vercel-githubio:AI Chat", "index": 3 },
-    { "name": "vercel-githubio:Blog", "index": 4 },
-    { "name": "vercel-githubio:Status", "index": 5 },
-    { "name": "racknerd", "index": 8 },
-    { "name": "racknerd:Bookmark", "index": 9 },
-    { "name": "racknerd:RSS", "index": 10 },
-    { "name": "racknerd:RSSHub", "index": 11 },
-    { "name": "racknerd:Wakapi", "index": 12 },
-    { "name": "laborari", "index": 16 },
-    { "name": "laborari:duplicity", "index": 17 },
-    { "name": "laborari:nix-auto-build", "index": 18 },
-    { "name": "laborari:terraria", "index": 19 },
-    { "name": "laborari:terraria2", "index": 20 },
-    { "name": "laborari:syncthing", "index": 21 },
-    { "name": "laborari:rclone-minio-mount", "index": 22 }
-  ]
+  "aggregator": { "url": "http://192.168.1.10:8080", "board": "example" },
+  "led": { "order": "GRB" }
 }

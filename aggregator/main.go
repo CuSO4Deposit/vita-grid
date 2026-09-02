@@ -7,7 +7,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 	"vita-grid/shared"
@@ -23,6 +25,7 @@ type Server struct {
 	sources []Source
 	refresh []int
 	cache   [][]shared.Signal
+	boards  map[string][]byte
 	mutex   sync.Mutex
 }
 
@@ -70,6 +73,7 @@ func newSource(raw json.RawMessage, defaultRefresh int) (Source, int, error) {
 
 func main() {
 	configPath := flag.String("config", "config.json", "config file path")
+	boardsDir := flag.String("boards", "", "directory of per-board JSON configs, served at /config/<board>")
 	flag.Parse()
 
 	config, err := loadConfig(*configPath)
@@ -93,21 +97,58 @@ func main() {
 		cache:   make([][]shared.Signal, len(sources)),
 	}
 
+	if *boardsDir != "" {
+		boards, err := loadBoards(*boardsDir)
+		if err != nil {
+			log.Fatalf("load boards failed: %v", err)
+		}
+		srv.boards = boards
+	}
+
 	srv.start()
 
 	http.HandleFunc("/status", srv.handleStatus)
 	http.HandleFunc("/status/text", srv.handleStatusText)
+	if *boardsDir != "" {
+		http.HandleFunc("/config/", srv.handleConfig)
+	}
 	log.Fatal(http.ListenAndServe(config.Listen, nil))
 }
 
-func worst(a shared.State, b shared.State) shared.State {
-	if a == shared.StateError || b == shared.StateError {
-		return shared.StateError
+func loadBoards(dir string) (map[string][]byte, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
 	}
-	if a == shared.StateWarn || b == shared.StateWarn {
-		return shared.StateWarn
+	boards := make(map[string][]byte)
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
+			continue
+		}
+		name := strings.TrimSuffix(e.Name(), ".json")
+		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		if err != nil {
+			return nil, err
+		}
+		boards[name] = data
 	}
-	return shared.StateOK
+	return boards, nil
+}
+
+func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
+	name := strings.TrimPrefix(r.URL.Path, "/config/")
+	name = strings.TrimSuffix(name, ".json")
+	if name == "" {
+		http.NotFound(w, r)
+		return
+	}
+	data, ok := s.boards[name]
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
 }
 
 func loadConfig(path string) (*Config, error) {

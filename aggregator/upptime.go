@@ -4,29 +4,53 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"sort"
 	"strings"
 	"time"
 	"vita-grid/shared"
 )
 
 type UpptimeConfig struct {
-	Repo    string              `json:"repo"`
-	Branch  string              `json:"branch"`
-	Groups  map[string][]string `json:"groups"`
-	Refresh int                 `json:"refresh"`
+	Repo    string        `json:"repo"`
+	Branch  string        `json:"branch"`
+	Sites   []UpptimeSite `json:"sites"`
+	Refresh int           `json:"refresh"`
+}
+
+type UpptimeSite struct {
+	Name string `json:"name"`
+	File string `json:"file"`
 }
 
 func (u *UpptimeConfig) Fetch() ([]shared.Signal, error) {
-	keys := make([]string, 0, len(u.Groups))
-	for k := range u.Groups {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
 	var out []shared.Signal
-	for _, host := range keys {
-		out = append(out, upptimeGroupStatus(u, host)...)
+	for _, site := range u.Sites {
+		name := site.Name
+		file := site.File
+		if name == "" {
+			name = file
+		}
+		if file == "" {
+			out = append(out, shared.Signal{Name: name, State: shared.StateWarn, Busy: false})
+			continue
+		}
+
+		body, err := fetchHistoryFile(u.Repo, u.Branch, file)
+		if err != nil {
+			out = append(out, shared.Signal{Name: name, State: shared.StateWarn, Busy: false})
+			continue
+		}
+
+		resp, err := parseSingleUpptimeResponse(body)
+		if err != nil {
+			out = append(out, shared.Signal{Name: name, State: shared.StateWarn, Busy: false})
+			continue
+		}
+
+		state := shared.StateOK
+		if resp.Status != "up" {
+			state = shared.StateError
+		}
+		out = append(out, shared.Signal{Name: name, State: state, Busy: false})
 	}
 	return out, nil
 }
@@ -39,8 +63,8 @@ type UpptimeResponse struct {
 
 var client = &http.Client{Timeout: 10 * time.Second}
 
-func fetchHistoryFile(repo string, branch string, siteName string) ([]byte, error) {
-	url := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/history/%s.yml", repo, branch, siteName)
+func fetchHistoryFile(repo string, branch string, file string) ([]byte, error) {
+	url := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/history/%s.yml", repo, branch, file)
 	resp, err := client.Get(url)
 	if err != nil {
 		return nil, err
@@ -83,37 +107,4 @@ func parseSingleUpptimeResponse(respBytes []byte) (*UpptimeResponse, error) {
 	}
 	parsed := UpptimeResponse{Url: url, Status: status, LastUpdated: lastUpdated}
 	return &parsed, nil
-}
-
-func slugify(name string) string {
-	return strings.ReplaceAll(strings.ToLower(name), " ", "-")
-}
-
-func upptimeGroupStatus(upptimeConfig *UpptimeConfig, host string) []shared.Signal {
-	state := shared.StateOK
-	var sites []shared.Signal
-	for _, site := range upptimeConfig.Groups[host] {
-		githubusercontentResp, err := fetchHistoryFile(upptimeConfig.Repo, upptimeConfig.Branch, slugify(site))
-		if err != nil {
-			// Do not block other sites, fetch failure as warning
-			sites = append(sites, shared.Signal{Name: host + ":" + site, State: shared.StateWarn, Busy: false})
-			state = worst(state, shared.StateWarn)
-			continue
-		}
-
-		upptimeResp, err := parseSingleUpptimeResponse(githubusercontentResp)
-		if err != nil {
-			sites = append(sites, shared.Signal{Name: host + ":" + site, State: shared.StateWarn, Busy: false})
-			state = worst(state, shared.StateWarn)
-			continue
-		}
-
-		siteState := shared.StateOK
-		if upptimeResp.Status != "up" {
-			siteState = shared.StateError
-		}
-		sites = append(sites, shared.Signal{Name: host + ":" + site, State: siteState, Busy: false})
-		state = worst(state, siteState)
-	}
-	return append([]shared.Signal{{Name: host, State: state, Busy: false}}, sites...)
 }

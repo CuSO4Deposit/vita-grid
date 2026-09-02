@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "poll": { "interval": 10 },
+  "led": { "pin": 4, "count": 64, "serpentine": true },
+  "bh1750": {
+    "enabled": true,
+    "sda": 21,
+    "scl": 22,
+    "offLux": 20
+  },
+  "brightness": { "level": 2 },
+  "colors": {
+    "ok": [0, 255, 0],
+    "warn": [255, 255, 0],
+    "error": [255, 0, 0],
+    "absent": [255, 0, 0]
+  },
+  "blink": { "intervalMs": 500 },
+  "mapping": [
+    { "name": "API", "index": 1 },
+    { "name": "API Next", "index": 2 },
+    { "name": "AI Chat", "index": 3 },
+    { "name": "Blog", "index": 4 },
+    { "name": "Status", "index": 5 },
+    { "name": "Bookmark", "index": 9 },
+    { "name": "RSS", "index": 10 },
+    { "name": "RSSHub", "index": 11 },
+    { "name": "Wakapi", "index": 12 },
+    { "name": "ef-3-e69-f0", "index": 13 },
+    { "name": "laborari:duplicity", "index": 17 },
+    { "name": "laborari:nix-auto-build", "index": 18 },
+    { "name": "laborari:terraria", "index": 19 },
+    { "name": "laborari:terraria2", "index": 20 },
+    { "name": "laborari:syncthing", "index": 21 },
+    { "name": "laborari:rclone-minio-mount", "index": 22 },
+    { "name": "lexikos:duplicity", "index": 25 },
+    { "name": "lexikos:v2raya", "index": 26 },
+    { "name": "lexikos:mm-config-extract", "index": 27 },
+    { "name": "proximo:duplicity", "index": 33 },
+    { "name": "proximo:minecraft", "index": 34 },
+    { "name": "proximo:piwigo", "index": 35 },
+    { "name": "proximo:observable", "index": 36 },
+    { "name": "proximo:ghorg", "index": 37 },
+    { "name": "proximo:syncthing", "index": 38 },
+    { "name": "proximo:nginx", "index": 39 }
+  ]
+}
